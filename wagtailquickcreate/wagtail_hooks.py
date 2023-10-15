@@ -36,18 +36,39 @@ class QuickCreatePanel(SummaryItem):
             page_models.append(item)
 
         # Build up an html chunk for the links to be rendered in the panel
-        page_models_html_chunk = [
-            """
-                <a href="/admin/quickcreate/create/{model_link}/">
-                <button class="button bicolor button--icon margin-bottom-sm" style="margin-right:6px;margin-bottom:6px;">
-                <span class="icon-wrapper">
-                <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
-                </span>
-                Add {model_name}</button></a>""".format(
-                model_link=i['link'], model_name=i['name']
-            )
-            for i in page_models
-        ]
+        page_models_html_chunk = []
+        for item in page_models:
+            model = apps.get_model(item['link'].replace('/', '.'))
+
+            # Si le modèle a un seul type de parent, trouvez ce parent
+            # et générer un lien direct pour la création.
+            if len(model.parent_page_types) == 1:
+                parent_model = apps.get_model(model.parent_page_types[0])
+                parent_instance = parent_model.objects.first()  # ou autre logique pour obtenir l'instance parente correcte
+                if parent_instance:
+                    model_name_lower = model.__name__.lower()
+                    link = f"/admin/pages/add/{model._meta.app_label}/{model_name_lower}/{parent_instance.id}/"
+                    page_models_html_chunk.append(
+                        f'<a href="{link}"><button class="button bicolor button--icon margin-bottom-sm" style="margin-right:6px;margin-bottom:6px;">'
+                        f'<span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true">'
+                        f'<use href="#icon-plus"></use></svg></span>Add {item["name"]}</button></a>'
+                    )
+                else:
+                    # Si aucun parent n'est trouvé, vous pouvez soit ignorer le bouton, soit utiliser la logique actuelle.
+                    pass
+            else:
+                page_models_html_chunk.append(
+                    """
+                    <a href="/admin/quickcreate/create/{model_link}/">
+                    <button class="button bicolor button--icon margin-bottom-sm" style="margin-right:6px;margin-bottom:6px;">
+                    <span class="icon-wrapper">
+                    <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    </span>
+                    Add {model_name}</button></a>""".format(
+                        model_link=item['link'], model_name=item['name']
+                    )
+                )
+
 
         page_models_html_chunk = list(set(page_models_html_chunk))
 

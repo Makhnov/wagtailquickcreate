@@ -1,4 +1,5 @@
 from django.apps import apps
+from django.conf import settings
 from django.views.generic import TemplateView
 
 from wagtail.models import Page
@@ -17,6 +18,9 @@ class QuickCreateView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        # On récupère la liste
+        quick_create_page_types = getattr(settings, "WAGTAIL_QUICK_CREATE_PAGE_TYPES", [])
+        
         # Work out the parent pages to offer to the user to add
         # their new page under, for this we need to query the objects/models
         # allowed parent pages
@@ -25,7 +29,8 @@ class QuickCreateView(TemplateView):
         model = apps.get_model(app, _model)
         # Exclude base wagtail page class from possible parents
         parent_models = [m for m in model.allowed_parent_page_models() if m is not Page]
-
+        description = next((desc for model_path, desc in quick_create_page_types if model_path == f"{app}.{_model}"), None)
+        
         # With the 'allowed parent page' models we have found, get all
         # those objects from the database so we can offer them as parent pages
         # for the new child page being added
@@ -45,13 +50,13 @@ class QuickCreateView(TemplateView):
             item['app_label'] = i._meta.app_label
             item['model'] = _model
             item['page'] = i
-            # Also send through the section page ancestors for a clearer link path
-            # to the user.
+            item['instance'] = i.__class__.__name__
             item['ancestors'] = i.get_ancestors()
             parent_pages.append(item)
 
         context['model_verbose_name'] = model.get_verbose_name()
-        context['browser_title'] = f'Add a {model.get_verbose_name()}'
+        context['browser_title'] = f'Créer {description}'
         context['model_app'] = app
         context['parent_pages'] = parent_pages
+        context['name'] = description
         return context

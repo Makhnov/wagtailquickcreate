@@ -17,29 +17,26 @@ class QuickCreatePanel(SummaryItem):
     def get_context_data(self, parent_context):
         context = super().get_context_data(parent_context)
         quick_create_page_types = getattr(settings, "WAGTAIL_QUICK_CREATE_PAGE_TYPES", [])
-
+        
         if not quick_create_page_types:
             return ""
 
         # Make a list of the models with edit links
         # EG [{'link': 'news/NewsPage', 'name': 'News page'}]
         page_models = []
-        for i in quick_create_page_types:
+        for path, description in quick_create_page_types:
             item = {}
-            # When testing, or if the app/model has a specific name
-            # target the last 2 list values
-            i = i.split('.')
-            i = '.'.join(i[-2:])
-            model = apps.get_model(i)
+            # Split the model path and get the model class
+            model = apps.get_model(path)
             item['link'] = model._meta.app_label + '/' + model.__name__
-            item['name'] = model.get_verbose_name()
+            item['name'] = description
             page_models.append(item)
 
         # Build up an html chunk for the links to be rendered in the panel
         page_models_html_chunk = []
         for item in page_models:
             model = apps.get_model(item['link'].replace('/', '.'))
-
+            print(model)
             # Si le modèle a un seul type de parent, trouvez ce parent
             # et générer un lien direct pour la création.
             if len(model.parent_page_types) == 1:
@@ -51,10 +48,9 @@ class QuickCreatePanel(SummaryItem):
                     page_models_html_chunk.append(
                         f'<a href="{link}"><button class="button bicolor button--icon margin-bottom-sm" style="margin-right:6px;margin-bottom:6px;">'
                         f'<span class="icon-wrapper"><svg class="icon icon-plus icon" aria-hidden="true">'
-                        f'<use href="#icon-plus"></use></svg></span>Add {item["name"]}</button></a>'
+                        f'<use href="#icon-plus"></use></svg></span>Créer {item["name"]}</button></a>'
                     )
                 else:
-                    # Si aucun parent n'est trouvé, vous pouvez soit ignorer le bouton, soit utiliser la logique actuelle.
                     pass
             else:
                 page_models_html_chunk.append(
@@ -64,33 +60,54 @@ class QuickCreatePanel(SummaryItem):
                     <span class="icon-wrapper">
                     <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
                     </span>
-                    Add {model_name}</button></a>""".format(
+                    Créer {model_name}</button></a>""".format(
                         model_link=item['link'], model_name=item['name']
                     )
                 )
 
 
-        page_models_html_chunk = list(set(page_models_html_chunk))
+        page_models = []
+        for item in page_models_html_chunk:
+            if item not in page_models:                
+                page_models.append(item)
 
         if getattr(settings, "WAGTAIL_QUICK_CREATE_IMAGES", False):
-            page_models_html_chunk.append("""
+            page_models.append("""
                     <a href="/admin/images/multiple/add/">
                     <button class="button bicolor button--icon" style="margin-right:6px;margin-bottom:6px;">
                     <span class="icon-wrapper">
                     <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
                     </span>
-                    Add Image</button></a>
+                    Ajouter une/des image(s)</button></a>
                     """)
         if getattr(settings, "WAGTAIL_QUICK_CREATE_DOCUMENTS", False):
-            page_models_html_chunk.append("""
+            page_models.append("""
                     <a href="/admin/documents/multiple/add/">
                     <button class="button bicolor button--icon" style="margin-right:6px;margin-bottom:6px;">
                     <span class="icon-wrapper">
                     <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
                     </span>
-                    Add Document</button></a>
+                    Ajouter un/des document(s)</button></a>
                     """)
-        context["models"] = mark_safe(''.join(page_models_html_chunk))
+        if getattr(settings, "WAGTAIL_QUICK_CREATE_AUDIO", False):
+            page_models.append("""
+                    <a href="/admin/media/audio/add/">
+                    <button class="button bicolor button--icon" style="margin-right:6px;margin-bottom:6px;">
+                    <span class="icon-wrapper">
+                    <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    </span>
+                    Ajouter un fichier audio</button></a>
+                    """)
+        if getattr(settings, "WAGTAIL_QUICK_CREATE_VIDEO", False):
+            page_models.append("""
+                    <a href="/admin/media/video/add/">
+                    <button class="button bicolor button--icon" style="margin-right:6px;margin-bottom:6px;">
+                    <span class="icon-wrapper">
+                    <svg class="icon icon-plus icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    </span>
+                    Ajouter un fichier vidéo</button></a>
+                    """)
+        context["models"] = mark_safe(''.join(page_models))
         return context
 
 

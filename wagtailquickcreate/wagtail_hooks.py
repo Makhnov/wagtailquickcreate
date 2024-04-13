@@ -2,13 +2,9 @@ from django.apps import apps
 from django.conf import settings
 from django.urls import path
 from django.utils.safestring import mark_safe
-
 from wagtail.admin.site_summary import SiteSummaryPanel, SummaryItem
-
 from wagtail import hooks
-
 from .views import QuickCreateView
-
 
 class QuickCreatePanel(SummaryItem):
     template_name = "wagtailquickcreate/panel.html"
@@ -36,9 +32,7 @@ class QuickCreatePanel(SummaryItem):
         page_models_html_chunk = []
         for item in page_models:
             model = apps.get_model(item['link'].replace('/', '.'))
-            print(model)
-            # Si le modèle a un seul type de parent, trouvez ce parent
-            # et générer un lien direct pour la création.
+            # Si le modèle n'a qu'un seul parent, on peut créer une instance de la page directement
             if len(model.parent_page_types) == 1:
                 parent_model = apps.get_model(model.parent_page_types[0])
                 parent_instance = parent_model.objects.first()  # ou autre logique pour obtenir l'instance parente correcte
@@ -64,7 +58,6 @@ class QuickCreatePanel(SummaryItem):
                         model_link=item['link'], model_name=item['name']
                     )
                 )
-
 
         page_models = []
         for item in page_models_html_chunk:
